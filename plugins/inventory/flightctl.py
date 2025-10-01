@@ -99,7 +99,8 @@ options:
     hostnames:
       description: |
         Dotted path of the device field to use as the Ansible inventory hostname (for example, C(metadata.name) or C(status.systemInfo.hostname)).
-        Alternatively, a simple concatenation expression is supported using C(+) to join dotted fields and quoted literals (for example, C(metadata.name + '_' + metadata.uid)).
+        Alternatively, a simple concatenation expression is supported using C(+) to join dotted fields and quoted
+        literals (for example, C(metadata.name + '_' + metadata.uid)).
         If the specified field is not present or empty for a device, it will default to C(metadata.name).
       type: str
       required: false
