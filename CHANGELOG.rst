@@ -10,7 +10,7 @@ v1.3.0
 Release Summary
 ---------------
 
-Added support for Flight Control API v0.9.0. and Improved the FlightCtl inventory plugin robustness.
+Added support for Flight Control API v0.10.0 and improved the FlightCtl inventory plugin robustness.
 
 Minor Changes
 -------------

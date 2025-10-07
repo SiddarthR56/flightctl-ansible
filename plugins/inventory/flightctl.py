@@ -584,7 +584,7 @@ def _resolve_hostname(device: Dict[str, Any], name_field: str) -> Optional[str]:
         return value
     raw = _get_value_by_dotted_path(device, name_field)
     if isinstance(raw, str) and raw.strip() != '':
-        return raw
+        return raw.strip()
     return None
 
 
