@@ -551,37 +551,36 @@ def _get_value_by_dotted_path(data: Dict[str, Any], dotted_path: str | None) -> 
 
 
 def _render_hostname_expression(device: Dict[str, Any], expr: str) -> Optional[str]:
-     """
-     Render a minimal concatenation expression of the form:
-       metadata.name + '_' + metadata.uid
-     Parts may be dotted paths or quoted string literals.
-     Returns a non-empty string on success, or None if it cannot be rendered.
-     """
-     if not isinstance(expr, str) or '+' not in expr:
-         return None
-     parts = expr.split('+')
-     rendered_parts: List[str] = []
-     resolved_value = False
-     for raw in parts:
-         token = raw.strip()
-         if token == '':
-             continue
-         if (token.startswith("'") and token.endswith("'")) or (token.startswith('"') and token.endswith('"')):
-             rendered_parts.append(token[1:-1])
-             continue
-         value = _get_value_by_dotted_path(device, token)
-         if value is None:
-             rendered_parts.append("")
-             continue
-         value_str = str(value)
-         if value_str.strip():
-             resolved_value = True
-         rendered_parts.append(value_str)
-     result = "".join(rendered_parts).strip()
-     if not resolved_value:
-         return None
-     return result if result else None
-
+    """
+    Render a minimal concatenation expression of the form:
+      metadata.name + '_' + metadata.uid
+    Parts may be dotted paths or quoted string literals.
+    Returns a non-empty string on success, or None if it cannot be rendered.
+    """
+    if not isinstance(expr, str) or '+' not in expr:
+        return None
+    parts = expr.split('+')
+    rendered_parts: List[str] = []
+    resolved_value = False
+    for raw in parts:
+        token = raw.strip()
+        if token == '':
+            continue
+        if (token.startswith("'") and token.endswith("'")) or (token.startswith('"') and token.endswith('"')):
+            rendered_parts.append(token[1:-1])
+            continue
+        value = _get_value_by_dotted_path(device, token)
+        if value is None:
+            rendered_parts.append("")
+            continue
+        value_str = str(value)
+        if value_str.strip():
+            resolved_value = True
+        rendered_parts.append(value_str)
+    result = "".join(rendered_parts).strip()
+    if not resolved_value:
+        return None
+    return result if result else None
 
 def _resolve_hostname(device: Dict[str, Any], name_field: str) -> Optional[str]:
     """Resolve hostname from a dotted path or a minimal '+' concatenation expression."""
