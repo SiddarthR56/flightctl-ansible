@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import patch, MagicMock
 
 # Import your inventory module
-from plugins.inventory.flightctl import InventoryModule, _render_hostname_expression, _resolve_hostname
+from plugins.inventory.flightctl import InventoryModule, _render_hostname_expression, _resolve_hostname, _validate_device
 
 
 class TestFlightCtlInventoryModule(unittest.TestCase):
@@ -315,8 +315,8 @@ class TestRenderHostnameExpression(unittest.TestCase):
         """Test when all paths are None/missing"""
         device = {'metadata': {'name': 'device1'}}
         result = _render_hostname_expression(device, "metadata.missing1 + '_' + metadata.missing2")
-        # All parts empty except literal, but result is just "_" which after strip becomes empty
-        self.assertEqual(result, "_")
+        # No device values resolved, should return None to trigger fallback
+        self.assertIsNone(result)
 
     def test_empty_result_returns_none(self):
         """Test that empty result string returns None"""
@@ -361,7 +361,8 @@ class TestRenderHostnameExpression(unittest.TestCase):
         """Test expression with only literals (no device paths)"""
         device = {}
         result = _render_hostname_expression(device, "'hello' + '-' + 'world'")
-        self.assertEqual(result, "hello-world")
+        # No device values resolved, should return None to trigger fallback
+        self.assertIsNone(result)
 
     def test_trailing_plus(self):
         """Test expression ending with +"""
@@ -450,6 +451,74 @@ class TestResolveHostname(unittest.TestCase):
         device = {'metadata': {'name': '  device1  '}}
         result = _resolve_hostname(device, "metadata.name")
         self.assertEqual(result, "device1")
+
+    def test_literal_only_expression_returns_none(self):
+        """Test that literal-only expression (no device fields) returns None"""
+        device = {'metadata': {'name': 'fallback-device'}}
+        result = _resolve_hostname(device, "'hello' + '-' + 'world'")
+        # Expression has no device values, so _render returns None, then dotted path fails
+        self.assertIsNone(result)
+
+    def test_all_missing_fields_returns_none(self):
+        """Test that expression with only missing fields returns None"""
+        device = {'metadata': {'name': 'fallback-device'}}
+        result = _resolve_hostname(device, "metadata.missing1 + '_' + metadata.missing2")
+        # Expression has no resolved device values, falls back to dotted path which also fails
+        self.assertIsNone(result)
+
+
+class TestValidateDeviceWithExpressions(unittest.TestCase):
+    """Test suite for _validate_device with hostname expressions"""
+
+    def test_validate_device_fallback_from_literal_only_expression(self):
+        """Test that _validate_device falls back to metadata.name when expression has no device fields"""
+        device = {
+            'metadata': {
+                'name': 'fallback-device',
+                'uid': 'abc123'
+            }
+        }
+        # Literal-only expression should fail and fall back to metadata.name
+        device_id, metadata = _validate_device(device, "'hello' + '-' + 'world'")
+        self.assertEqual(device_id, 'fallback-device')
+        self.assertEqual(metadata, device['metadata'])
+
+    def test_validate_device_fallback_from_missing_fields_expression(self):
+        """Test that _validate_device falls back to metadata.name when all expression fields are missing"""
+        device = {
+            'metadata': {
+                'name': 'fallback-device'
+            }
+        }
+        # Expression with all missing fields should fail and fall back to metadata.name
+        device_id, metadata = _validate_device(device, "metadata.missing1 + '_' + metadata.missing2")
+        self.assertEqual(device_id, 'fallback-device')
+        self.assertEqual(metadata, device['metadata'])
+
+    def test_validate_device_uses_expression_when_fields_present(self):
+        """Test that _validate_device uses expression result when device fields are present"""
+        device = {
+            'metadata': {
+                'name': 'device1',
+                'uid': 'abc123'
+            }
+        }
+        # Expression with valid fields should succeed
+        device_id, metadata = _validate_device(device, "metadata.name + '_' + metadata.uid")
+        self.assertEqual(device_id, 'device1_abc123')
+        self.assertEqual(metadata, device['metadata'])
+
+    def test_validate_device_partial_expression_with_missing_field(self):
+        """Test that _validate_device uses expression result even with some missing fields"""
+        device = {
+            'metadata': {
+                'name': 'device1'
+            }
+        }
+        # Expression with one valid field should succeed (missing field becomes empty string)
+        device_id, metadata = _validate_device(device, "metadata.name + '_' + metadata.uid")
+        self.assertEqual(device_id, 'device1_')
+        self.assertEqual(metadata, device['metadata'])
 
 
 if __name__ == '__main__':
